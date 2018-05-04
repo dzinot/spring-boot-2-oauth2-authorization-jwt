@@ -33,6 +33,9 @@ import com.kristijangeorgiev.auth.service.CustomUserDetailsService;
 public class OAuth2Configuration extends AuthorizationServerConfigurerAdapter {
 
 	@Autowired
+	private DataSource dataSource;
+
+	@Autowired
 	private PasswordEncoder passwordEncoder;
 
 	@Autowired
@@ -40,10 +43,12 @@ public class OAuth2Configuration extends AuthorizationServerConfigurerAdapter {
 	private AuthenticationManager authenticationManager;
 
 	@Autowired
-	private DataSource dataSource;
-
-	@Autowired
 	private CustomUserDetailsService userDetailsService;
+
+	@Bean
+	public TokenStore tokenStore() {
+		return new JwtTokenStore(jwtAccessTokenConverter());
+	}
 
 	@Override
 	public void configure(ClientDetailsServiceConfigurer clients) throws Exception {
@@ -62,13 +67,7 @@ public class OAuth2Configuration extends AuthorizationServerConfigurerAdapter {
 	}
 
 	@Bean
-	public TokenStore tokenStore() {
-		return new JwtTokenStore(jwtAccessTokenConverter());
-	}
-
-	// TODO encrypt password
-	@Bean
-	protected JwtAccessTokenConverter jwtAccessTokenConverter() {
+	public JwtAccessTokenConverter jwtAccessTokenConverter() {
 		JwtAccessTokenConverter converter = new CustomTokenEnhancer();
 		converter.setKeyPair(
 				new KeyStoreKeyFactory(new ClassPathResource("jwt.jks"), "password".toCharArray()).getKeyPair("jwt"));
