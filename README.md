@@ -32,6 +32,26 @@ There's the [UserRepository](src/main/java/com/kristijangeorgiev/auth/repository
 
 In order to use our custom [User](src/main/java/com/kristijangeorgiev/auth/entity/User.java) object we must provide with a [CustomUserDetailsService](src/main/java/com/kristijangeorgiev/auth/service/CustomUserDetailsService.java) which implements the **UserDetailsService**. The **loadUserByUsername** method is overriden and set up to work with our logic.
 
+## Database [oauth2.sql](src/main/resources/oauth2.sql)
+
+The database with all the tables and a test user.
+
+### Users
+
+**username**: ***user***
+
+**password**: ***password***
+
+### Clients
+
+**client**: ***adminapp***
+
+**secret**: ***password***
+
+The user is associated with a ***role_admin*** and that role is associated with several permissions.
+
+Check the database configuration in the [application.yml](https://github.com/dzinot/spring-boot-2-oauth2-authorization-jwt/blob/master/src/main/resources/application.yml) file.
+
 ## Configure [WebSecurity](src/main/java/com/kristijangeorgiev/auth/configuration/WebSecurityConfiguration.java)
 
 In **Spring Boot 2** you must use the **DelegatingPasswordEncoder**.
@@ -163,6 +183,7 @@ Just clone or download the repo and import it as an existing maven project.
 You'll also need to set up [Project Lombok](https://projectlombok.org/) or if you don't want to use this library you can remove the associated annotations from the code and write the getters, setters, constructors, etc. by yourself.
 
 ## Use
+
 To test it I used [HTTPie](https://httpie.org/). It's similar to CURL.
 
 To get a **JWT** token execute the following command:
