@@ -1,5 +1,8 @@
 # Spring Boot 2 OAuth2 JWT Authorization Server
 
+### Link to [Spring Boot 2 OAuth2 JWT Resource Server](https://github.com/dzinot/spring-boot-2-oauth2-resource-jwt) project
+---
+
 Simple project on how to setup **OAuth2** authorization server with **JWT** tokens using **Spring Boot 2**, **JPA**, **Hibernate** and **MySQL**.
 
 ## In Short
