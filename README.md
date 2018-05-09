@@ -37,11 +37,11 @@ In order to use our custom [User](src/main/java/com/kristijangeorgiev/auth/entit
 
 ## Database [oauth2.sql](src/main/resources/oauth2.sql)
 
-The database with all the tables and a test user.
+The database with all the tables and a test client and users.
 
 ### Users
 
-**username**: ***user***
+**username**: ***admin*** or ***user***
 
 **password**: ***password***
 
@@ -75,7 +75,7 @@ public AuthenticationManager authenticationManagerBean() throws Exception {
 Configure AuthenticationManagerBuilder
 ```
 @Autowired
-private CustomUserDetailsService userDetailsService;
+private UserDetailsService userDetailsService;
 
 @Override
 public void configure(AuthenticationManagerBuilder auth) throws Exception {
@@ -126,7 +126,7 @@ public void configure(ClientDetailsServiceConfigurer clients) throws Exception {
 Configure the endpoints to use the custom beans.
 ```
 @Autowired
-private CustomUserDetailsService userDetailsService;
+private UserDetailsService userDetailsService;
 
 @Bean
 public TokenStore tokenStore() {
@@ -178,6 +178,7 @@ public JwtAccessTokenConverter jwtAccessTokenConverter() {
 }
 ```
 
+**TODO**: Write documentation about **checkUserScopes**.
 
 ## Installing
 
@@ -191,7 +192,7 @@ To test it I used [HTTPie](https://httpie.org/). It's similar to CURL.
 
 To get a **JWT** token execute the following command:
 ```
-http --form POST adminapp:password@localhost:9999/oauth/token grant_type=password username=user password=password
+http --form POST adminapp:password@localhost:9999/oauth/token grant_type=password username=admin password=password
 ```
 
 ```
