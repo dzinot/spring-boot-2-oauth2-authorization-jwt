@@ -35,9 +35,9 @@ There's the [UserRepository](src/main/java/com/kristijangeorgiev/auth/repository
 
 In order to use our custom [User](src/main/java/com/kristijangeorgiev/auth/entity/User.java) object we must provide with a [CustomUserDetailsService](src/main/java/com/kristijangeorgiev/auth/service/CustomUserDetailsService.java) which implements the **UserDetailsService**. The **loadUserByUsername** method is overriden and set up to work with our logic.
 
-## Database [oauth2.sql](src/main/resources/oauth2.sql)
+## Database [oauth2.sql](src/main/resources/oauth2.sql) and [application.yml](src/main/resources/application.yml)
 
-The database with all the tables and a test client and users.
+The database with all the tables and a test client and users. Check the configuration in the [application.yml](src/main/resources/application.yml) file.
 
 ### Users
 
@@ -51,9 +51,24 @@ The database with all the tables and a test client and users.
 
 **secret**: ***password***
 
-The user is associated with a ***role_admin*** and that role is associated with several permissions.
+The ***admin*** is associated with a ***role_admin*** and that role is associated with several permissions.
+The ***user*** is associated with a ***role_user*** and read permissions.
 
-Check the database configuration in the [application.yml](https://github.com/dzinot/spring-boot-2-oauth2-authorization-jwt/blob/master/src/main/resources/application.yml) file.
+### checkUserScopes
+
+If **checkUserScopes** is set to **false** (default **Spring Boot 2** functionality), no checks will be done between the client **scope** and the user **authorities**.
+
+If **checkUserScopes** is set to **true** (see documentation below), then when a user tries to authenticate with a client, we check whether at least one of the user **authorities** is contained in the client **scope**. (I don't know why the default implementation is not done like this)
+
+**checkUserScopes** is set as a property inside the [application.yml](src/main/resources/application.yml) file.
+```
+check-user-scopes: true
+```
+And we get the value in the [OAuth2Configuration](src/main/java/com/kristijangeorgiev/auth/configuration/OAuth2Configuration.java) class.
+```
+@Value("${check-user-scopes}")
+private Boolean checkUserScopes;
+```
 
 ## Configure [WebSecurity](src/main/java/com/kristijangeorgiev/auth/configuration/WebSecurityConfiguration.java)
 
@@ -178,7 +193,51 @@ public JwtAccessTokenConverter jwtAccessTokenConverter() {
 }
 ```
 
-**TODO**: Write documentation about **checkUserScopes**.
+In order to make **checkUserScopes** to work, you must set that field in the **RequestFactory** and configure Spring to use that factory in the **endpoints** configuration. This should've worked just like this but for some reason when the **checkUserScopes** is enabled the authentication of a user works fine but the refresh token is not working. When you hit the token endpoint with the refresh token, Spring sets the **Authentication** in the Security Context to be the one of the client, not the user from the refresh token and it doesn't update it later. This means when checks are done on the **scope** and **authorities** you always get the **authorities** from the client, not the user. 
+
+I've created a **CustomOAuth2RequestFactory** that extends the **DefaultOAuth2RequestFactory** and override the **createTokenRequest** method where I get the **Authentication** from the refresh token, autowire the **userDetailsService**, get the [User](src/main/java/com/kristijangeorgiev/auth/entity/User.java) from the database and manually update the Security Context. This means if there are any changes to the [User](src/main/java/com/kristijangeorgiev/auth/entity/User.java) we always check for details from the database and not the refresh token itself.
+
+```
+class CustomOauth2RequestFactory extends DefaultOAuth2RequestFactory {
+	@Autowired
+	private TokenStore tokenStore;
+
+	public CustomOauth2RequestFactory(ClientDetailsService clientDetailsService) {
+		super(clientDetailsService);
+	}
+
+	@Override
+	public TokenRequest createTokenRequest(Map<String, String> requestParameters,
+			ClientDetails authenticatedClient) {
+		if (requestParameters.get("grant_type").equals("refresh_token")) {
+			OAuth2Authentication authentication = tokenStore.readAuthenticationForRefreshToken(
+					tokenStore.readRefreshToken(requestParameters.get("refresh_token")));
+			SecurityContextHolder.getContext()
+					.setAuthentication(new UsernamePasswordAuthenticationToken(authentication.getName(), null,
+							userDetailsService.loadUserByUsername(authentication.getName()).getAuthorities()));
+		}
+		return super.createTokenRequest(requestParameters, authenticatedClient);
+	}
+}
+```
+
+Define a **requestFactory** bean. You'll also need the **clientDetailsService** here.
+```
+@Autowired
+private ClientDetailsService clientDetailsService;
+
+@Bean
+public OAuth2RequestFactory requestFactory() {
+	CustomOauth2RequestFactory requestFactory = new CustomOauth2RequestFactory(clientDetailsService);
+	requestFactory.setCheckUserScopes(true);
+	return requestFactory;
+}
+```
+Last step is to configure the endpoints to use this **requestFactory**. Because we are doing check on the **checkUserScopes** we have this in the endpoints configuration method.
+```
+if (checkUserScopes)
+	endpoints.requestFactory(requestFactory());
+```
 
 ## Installing
 
